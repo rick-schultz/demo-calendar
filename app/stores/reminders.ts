@@ -6,6 +6,7 @@ export interface Reminder {
   time: string
   text: string
   city: string
+  color: string
 }
 
 export const useRemindersStore = defineStore('reminders', {
@@ -42,7 +43,12 @@ export const useRemindersStore = defineStore('reminders', {
     },
 
     getRemindersForDate(date: string) {
-      return this.reminders.filter(r => r.date === date)
+      return this.reminders
+        .filter(r => r.date === date)
+        .map(r => ({
+          ...r,
+          color: r.color || '#3472af'
+        }))
     }
   }
 })
