@@ -18,7 +18,7 @@
         <div
           v-for="(dayObj, idx) in days"
           :key="idx"
-          class="day-cell px-[0.5em] py-[0.4em] text-[1.3rem] font-semibold"
+          class="day-cell px-[0.5em] py-[0.4em] text-[0.9rem] md:text-[1.3rem] font-semibold cursor-pointer hover:bg-blue-50"
           :class="{
             'today-cell': isToday(dayObj.date),
             'text-[#b0b0b0]': !dayObj.current,
@@ -26,11 +26,23 @@
             'bg-[#f3f3f3]': isWeekend(dayObj.date),
             'bg-white': !isWeekend(dayObj.date)
           }"
+          @click="openReminderModal(dayObj.date)"
         >
-          {{ dayObj.date.getDate() }}
+          <div>{{ dayObj.date.getDate() }}</div>
+          <div v-if="getRemindersForDay(dayObj.date).length > 0" class="text-[0.65rem] md:text-xs font-normal mt-1">
+            <div
+              v-for="reminder in getRemindersForDay(dayObj.date)"
+              :key="reminder.id"
+              class="text-[#3472af] truncate"
+            >
+              {{ reminder.time }} {{ reminder.text }}
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
+    <ReminderModal />
   </div>
 </template>
 
@@ -38,6 +50,9 @@
 <script setup lang="ts">
 import dayjs from 'dayjs'
 import { computed } from 'vue'
+import { useRemindersStore } from '@/stores/reminders'
+
+const remindersStore = useRemindersStore()
 
 const now = dayjs()
 const monthYear = now.format('MMMM YYYY')
@@ -92,6 +107,18 @@ const isToday = (date: Date) => {
 const isWeekend = (date: Date) => {
   const day = date.getDay()
   return day === 0 || day === 6
+}
+
+const formatDate = (date: Date) => {
+  return dayjs(date).format('YYYY-MM-DD')
+}
+
+const openReminderModal = (date: Date) => {
+  remindersStore.openModal(formatDate(date))
+}
+
+const getRemindersForDay = (date: Date) => {
+  return remindersStore.getRemindersForDate(formatDate(date))
 }
 </script>
 
