@@ -1,8 +1,24 @@
 <template>
   <div class="w-full h-full max-md:h-[50vh] flex items-center justify-center overflow-hidden">
     <div class="w-[90%] max-w-[1400px] h-[95%] max-h-[900px] flex flex-col bg-white overflow-hidden">
-      <div class="flex-shrink-0 text-center font-bold pb-4 text-2xl">
-        {{ monthYear }}
+      <div class="flex-shrink-0 flex items-center justify-center gap-4 pb-4">
+        <button 
+          class="p-2 hover:bg-gray-100 rounded-full transition-colors flex items-center justify-center"
+          aria-label="Previous month"
+          @click="previousMonth"
+        >
+          <UIcon name="i-heroicons-chevron-left" class="w-6 h-6 text-[#3472af]" />
+        </button>
+        <div class="font-bold text-2xl flex items-center justify-center w-48">
+          {{ monthYear }}
+        </div>
+        <button 
+          class="p-2 hover:bg-gray-100 rounded-full transition-colors flex items-center justify-center"
+          aria-label="Next month"
+          @click="nextMonth"
+        >
+          <UIcon name="i-heroicons-chevron-right" class="w-6 h-6 text-[#3472af]" />
+        </button>
       </div>
       <div class="grid grid-cols-7 flex-shrink-0">
         <div
@@ -41,7 +57,7 @@
               <UIcon 
                 v-if="reminder.weather" 
                 :name="getWeatherIcon(reminder.weather)" 
-                class="flex-shrink-0 w-3 h-3 md:w-4 md:h-4"
+                class="hidden md:flex flex-shrink-0 w-4 h-4"
               />
             </div>
           </div>
@@ -61,6 +77,8 @@ import { useRemindersStore } from '@/stores/reminders'
 import { formatDate, formatTime } from '@/utils/dateTime'
 
 const remindersStore = useRemindersStore()
+const route = useRoute()
+const router = useRouter()
 
 // Auto-refresh every 5 minutes
 let weatherRefreshInterval: ReturnType<typeof setInterval> | null = null
@@ -81,15 +99,40 @@ onUnmounted(() => {
   }
 })
 
-const now = dayjs()
-const monthYear = now.format('MMMM YYYY')
+const currentDate = computed(() => {
+  const year = route.query.year ? parseInt(route.query.year as string) : dayjs().year()
+  const month = route.query.month ? parseInt(route.query.month as string) : dayjs().month()
+  return dayjs().year(year).month(month)
+})
+
+const monthYear = computed(() => currentDate.value.format('MMMM YYYY'))
+
+const previousMonth = () => {
+  const newDate = currentDate.value.subtract(1, 'month')
+  router.push({
+    query: {
+      year: newDate.year(),
+      month: newDate.month()
+    }
+  })
+}
+
+const nextMonth = () => {
+  const newDate = currentDate.value.add(1, 'month')
+  router.push({
+    query: {
+      year: newDate.year(),
+      month: newDate.month()
+    }
+  })
+}
 
 const weekdaysFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const weekdaysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const days = computed(() => {
-  const year = now.year()
-  const month = now.month()
+  const year = currentDate.value.year()
+  const month = currentDate.value.month()
   const firstDay = dayjs(new Date(year, month, 1))
   const lastDay = dayjs(new Date(year, month + 1, 0))
   const result = []
