@@ -42,6 +42,16 @@ export const useRemindersStore = defineStore('reminders', {
       }
     },
 
+    updateReminder(id: number, updatedData: Omit<Reminder, 'id'>) {
+      const index = this.reminders.findIndex(r => r.id === id)
+      if (index !== -1) {
+        this.reminders[index] = {
+          ...updatedData,
+          id
+        }
+      }
+    },
+
     getRemindersForDate(date: string) {
       return this.reminders
         .filter(r => r.date === date)

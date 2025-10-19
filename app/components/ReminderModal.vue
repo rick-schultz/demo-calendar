@@ -32,7 +32,7 @@
       <div class="md:flex gap-6">
         <!-- Reminder Section -->
         <div class="flex-1 flex flex-col" :class="{ 'hidden md:flex': showExistingOnMobile }">
-          <h3 class="text-md font-semibold mb-3">Add New Reminder</h3>
+          <h3 class="text-md font-semibold mb-3">{{ editingId ? 'Edit Reminder' : 'Add New Reminder' }}</h3>
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-semibold mb-1">Date</label>
@@ -91,15 +91,15 @@
           <div class="flex justify-end gap-3 mt-6">
             <button
               class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
-              @click="closeModal"
+              @click="cancelEdit"
             >
               Cancel
             </button>
             <button
               class="px-4 py-2 bg-[#3472af] text-white rounded hover:bg-[#2a5a8f]"
-              @click="addReminder"
+              @click="saveReminder"
             >
-              Add Reminder
+              {{ editingId ? 'Update Reminder' : 'Add Reminder' }}
             </button>
           </div>
 
@@ -137,13 +137,22 @@
                 <div class="font-semibold text-sm">{{ formatTime(reminder.time) }} - {{ reminder.text }}</div>
                 <div class="text-xs text-gray-600">{{ reminder.city }}</div>
               </div>
-              <button
-                class="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50 flex-shrink-0"
-                title="Delete reminder"
-                @click="deleteReminder(reminder.id)"
-              >
-                <UIcon name="i-heroicons-trash" class="w-5 h-5" />
-              </button>
+              <div class="flex gap-1 flex-shrink-0">
+                <button
+                  class="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
+                  title="Edit reminder"
+                  @click="editReminder(reminder)"
+                >
+                  <UIcon name="i-heroicons-pencil" class="w-5 h-5" />
+                </button>
+                <button
+                  class="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
+                  title="Delete reminder"
+                  @click="deleteReminder(reminder.id)"
+                >
+                  <UIcon name="i-heroicons-trash" class="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -165,6 +174,7 @@ const formText = ref('')
 const formCity = ref('')
 const formColor = ref('#3472af')
 const showExistingOnMobile = ref(false)
+const editingId = ref<number | null>(null)
 
 const colorOptions = [
   { name: 'Blue', value: '#3472af' },
@@ -189,32 +199,67 @@ watch(() => remindersStore.selectedDate, (newDate) => {
     formCity.value = ''
     formColor.value = '#3472af'
     showExistingOnMobile.value = false
+    editingId.value = null
   }
 })
 
+const resetForm = () => {
+  formDate.value = remindersStore.selectedDate
+  formTime.value = ''
+  formText.value = ''
+  formCity.value = ''
+  formColor.value = '#3472af'
+  editingId.value = null
+}
+
 const closeModal = () => {
   showExistingOnMobile.value = false
+  editingId.value = null
   remindersStore.closeModal()
+}
+
+const cancelEdit = () => {
+  if (editingId.value) {
+    resetForm()
+  } else {
+    closeModal()
+  }
+}
+
+const editReminder = (reminder: { id: number; date: string; time: string; text: string; city: string; color: string }) => {
+  editingId.value = reminder.id
+  formDate.value = reminder.date
+  formTime.value = reminder.time
+  formText.value = reminder.text
+  formCity.value = reminder.city
+  formColor.value = reminder.color
+  showExistingOnMobile.value = false
 }
 
 const deleteReminder = (id: number) => {
   remindersStore.deleteReminder(id)
 }
 
-const addReminder = () => {
+const saveReminder = () => {
   if (!formDate.value || !formTime.value || !formText.value || !formCity.value) {
     alert('Please fill in all fields')
     return
   }
 
-  remindersStore.addReminder({
+  const reminderData = {
     date: formDate.value,
     time: formTime.value,
     text: formText.value.substring(0, 30),
     city: formCity.value,
     color: formColor.value
-  })
+  }
 
-  closeModal()
+  if (editingId.value) {
+    remindersStore.updateReminder(editingId.value, reminderData)
+  } else {
+    remindersStore.addReminder(reminderData)
+  }
+
+  resetForm()
 }
 </script>
