@@ -230,6 +230,39 @@ describe('Reminders Store', () => {
     })
   })
 
+  describe('deleteAllRemindersForDate', () => {
+    it('should delete all reminders for a specific date', () => {
+      store.addReminder(createReminderData({ date: '2025-10-20', text: 'First' }))
+      store.addReminder(createReminderData({ date: '2025-10-20', text: 'Second' }))
+      store.addReminder(createReminderData({ date: '2025-10-21', text: 'Third' }))
+
+      store.deleteAllRemindersForDate('2025-10-20')
+
+      expect(store.reminders).toHaveLength(1)
+      expect(store.reminders[0]?.text).toBe('Third')
+    })
+
+    it('should not delete reminders from other dates', () => {
+      store.addReminder(createReminderData({ date: '2025-10-20' }))
+      store.addReminder(createReminderData({ date: '2025-10-21' }))
+      store.addReminder(createReminderData({ date: '2025-10-22' }))
+
+      store.deleteAllRemindersForDate('2025-10-21')
+
+      expect(store.reminders).toHaveLength(2)
+      expect(store.getRemindersForDate('2025-10-20')).toHaveLength(1)
+      expect(store.getRemindersForDate('2025-10-22')).toHaveLength(1)
+    })
+
+    it('should handle deleting from a date with no reminders', () => {
+      store.addReminder(createReminderData({ date: '2025-10-20' }))
+
+      store.deleteAllRemindersForDate('2025-10-25')
+
+      expect(store.reminders).toHaveLength(1)
+    })
+  })
+
   describe('Modal Management', () => {
     describe('openModal', () => {
       it('should set showModal to true', () => {

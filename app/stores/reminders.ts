@@ -42,6 +42,10 @@ export const useRemindersStore = defineStore('reminders', {
       }
     },
 
+    deleteAllRemindersForDate(date: string) {
+      this.reminders = this.reminders.filter(r => r.date !== date)
+    },
+
     updateReminder(id: number, updatedData: Omit<Reminder, 'id'>) {
       const index = this.reminders.findIndex(r => r.id === id)
       if (index !== -1) {

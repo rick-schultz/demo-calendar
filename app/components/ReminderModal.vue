@@ -116,12 +116,21 @@
 
         <!-- Existing Reminders Section -->
         <div v-if="existingReminders.length > 0" class="flex-1 flex flex-col max-h-[600px] md:border-l md:border-gray-200 md:pl-6" :class="{ 'hidden md:flex': !showExistingOnMobile }">
-          <h3 class="text-md font-semibold mb-3 flex-shrink-0">
-            Existing Reminders 
-            <span class="text-sm font-normal text-gray-500">
-              ({{ existingReminders.length }})
-            </span>
-          </h3>
+          <div class="flex items-center justify-between mb-3 flex-shrink-0">
+            <h3 class="text-md font-semibold">
+              Existing Reminders 
+              <span class="text-sm font-normal text-gray-500">
+                ({{ existingReminders.length }})
+              </span>
+            </h3>
+            <button
+              class="text-xs text-red-600 hover:text-red-800 px-3 py-1 rounded hover:bg-red-50 border border-red-300 hover:border-red-400 transition-colors"
+              title="Delete all reminders for this date"
+              @click="deleteAllReminders"
+            >
+              Delete All
+            </button>
+          </div>
           <div class="space-y-2 overflow-y-auto overflow-x-hidden pr-2 flex-1">
             <div
               v-for="reminder in existingReminders"
@@ -238,6 +247,11 @@ const editReminder = (reminder: { id: number; date: string; time: string; text: 
 
 const deleteReminder = (id: number) => {
   remindersStore.deleteReminder(id)
+}
+
+const deleteAllReminders = () => {
+  remindersStore.deleteAllRemindersForDate(remindersStore.selectedDate)
+  showExistingOnMobile.value = false
 }
 
 const saveReminder = () => {
