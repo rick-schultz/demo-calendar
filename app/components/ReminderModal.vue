@@ -144,7 +144,12 @@
               />
               <div class="flex-1 min-w-0">
                 <div class="font-semibold text-sm">{{ formatTime(reminder.time) }} - {{ reminder.text }}</div>
-                <div class="text-xs text-gray-600">{{ reminder.city }}</div>
+                <div class="text-xs text-gray-600 flex items-center gap-1">
+                  <span>{{ reminder.city }}</span>
+                  <span v-if="reminder.weather" class="inline-flex items-center gap-1">
+                    • <span class="font-medium">{{ reminder.weather }}</span>
+                  </span>
+                </div>
               </div>
               <div class="flex gap-1 flex-shrink-0">
                 <button
@@ -270,8 +275,14 @@ const saveReminder = () => {
 
   if (editingId.value) {
     remindersStore.updateReminder(editingId.value, reminderData)
+    remindersStore.fetchWeatherForReminder(editingId.value)
   } else {
     remindersStore.addReminder(reminderData)
+    // Fetch weather for new reminder
+    const newReminderId = remindersStore.reminders[remindersStore.reminders.length - 1]?.id
+    if (newReminderId) {
+      remindersStore.fetchWeatherForReminder(newReminderId)
+    }
   }
 
   resetForm()

@@ -33,10 +33,16 @@
             <div
               v-for="reminder in getRemindersForDay(dayObj.date)"
               :key="reminder.id"
-              class="truncate px-1 py-0.5 rounded"
+              class="flex items-center justify-between gap-1 px-1 py-0.5 rounded"
               :style="{ backgroundColor: reminder.color + '20', color: reminder.color }"
+              :title="reminder.weather ? `Weather: ${reminder.weather}` : ''"
             >
-              {{ formatTime(reminder.time) }} {{ reminder.text }}
+              <span class="truncate">{{ formatTime(reminder.time) }} {{ reminder.text }}</span>
+              <UIcon 
+                v-if="reminder.weather" 
+                :name="getWeatherIcon(reminder.weather)" 
+                class="flex-shrink-0 w-3 h-3 md:w-4 md:h-4"
+              />
             </div>
           </div>
         </div>
@@ -50,11 +56,30 @@
 
 <script setup lang="ts">
 import dayjs from 'dayjs'
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRemindersStore } from '@/stores/reminders'
 import { formatDate, formatTime } from '@/utils/dateTime'
 
 const remindersStore = useRemindersStore()
+
+// Auto-refresh every 5 minutes
+let weatherRefreshInterval: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  // Initial fetch
+  remindersStore.refreshAllWeather()
+  
+  // Set up 5-minute auto-refresh
+  weatherRefreshInterval = setInterval(() => {
+    remindersStore.refreshAllWeather()
+  }, 5 * 60 * 1000)
+})
+
+onUnmounted(() => {
+  if (weatherRefreshInterval) {
+    clearInterval(weatherRefreshInterval)
+  }
+})
 
 const now = dayjs()
 const monthYear = now.format('MMMM YYYY')
@@ -117,6 +142,27 @@ const openReminderModal = (date: Date) => {
 
 const getRemindersForDay = (date: Date) => {
   return remindersStore.getRemindersForDate(formatDate(date))
+}
+
+const getWeatherIcon = (weather: string): string => {
+  const weatherIcons: Record<string, string> = {
+    Clear: 'i-material-symbols-sunny',
+    Clouds: 'i-material-symbols-cloud',
+    Rain: 'i-material-symbols-rainy',
+    Drizzle: 'i-material-symbols-rainy-light',
+    Thunderstorm: 'i-material-symbols-thunderstorm',
+    Snow: 'i-material-symbols-ac-unit',
+    Mist: 'i-material-symbols-foggy',
+    Smoke: 'i-material-symbols-foggy',
+    Haze: 'i-material-symbols-foggy',
+    Dust: 'i-material-symbols-foggy',
+    Fog: 'i-material-symbols-foggy',
+    Sand: 'i-material-symbols-foggy',
+    Ash: 'i-material-symbols-foggy',
+    Squall: 'i-material-symbols-air',
+    Tornado: 'i-material-symbols-tornado'
+  }
+  return weatherIcons[weather] || 'i-material-symbols-partly-cloudy-day'
 }
 </script>
 

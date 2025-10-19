@@ -7,13 +7,15 @@ export interface Reminder {
   text: string
   city: string
   color: string
+  weather?: string | null
 }
 
 export const useRemindersStore = defineStore('reminders', {
   state: () => ({
     reminders: [] as Reminder[],
     showModal: false,
-    selectedDate: ''
+    selectedDate: '',
+    lastWeatherUpdate: {} as Record<string, number>
   }),
 
   actions: {
@@ -28,6 +30,14 @@ export const useRemindersStore = defineStore('reminders', {
     openModal(date: string) {
       this.selectedDate = date
       this.showModal = true
+      // Fetch weather only if it wasn't updated in the last 5 minutes
+      const now = Date.now()
+      const lastUpdate = this.lastWeatherUpdate[date] || 0
+      const fiveMinutes = 5 * 60 * 1000
+      
+      if (now - lastUpdate > fiveMinutes) {
+        this.refreshWeatherForDate(date)
+      }
     },
 
     closeModal() {
@@ -63,6 +73,39 @@ export const useRemindersStore = defineStore('reminders', {
           ...r,
           color: r.color || '#3472af'
         }))
+    },
+
+    async fetchWeatherForReminder(id: number) {
+      const { getWeatherForecast } = await import('@/services/weatherService')
+      const reminder = this.reminders.find(r => r.id === id)
+      
+      if (!reminder) return
+
+      const weather = await getWeatherForecast(reminder.date, reminder.city)
+      
+      const index = this.reminders.findIndex(r => r.id === id)
+      if (index !== -1) {
+        this.reminders.splice(index, 1, {
+          ...this.reminders[index]!,
+          weather
+        })
+      }
+    },
+
+    async refreshWeatherForDate(date: string) {
+      const remindersForDate = this.reminders.filter(r => r.date === date)
+      for (const reminder of remindersForDate) {
+        await this.fetchWeatherForReminder(reminder.id)
+      }
+      // Update weather timestamp
+      this.lastWeatherUpdate[date] = Date.now()
+    },
+
+    async refreshAllWeather() {
+      const uniqueDates = [...new Set(this.reminders.map(r => r.date))]
+      for (const date of uniqueDates) {
+        await this.refreshWeatherForDate(date)
+      }
     }
   }
 })
