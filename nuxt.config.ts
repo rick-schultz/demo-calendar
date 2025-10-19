@@ -7,6 +7,7 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/ui',
     '@nuxt/test-utils',
+    '@pinia/nuxt',
     'dayjs-nuxt'
   ]
 })
