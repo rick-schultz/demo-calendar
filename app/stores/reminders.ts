@@ -15,16 +15,44 @@ export const useRemindersStore = defineStore('reminders', {
     reminders: [] as Reminder[],
     showModal: false,
     selectedDate: '',
-    lastWeatherUpdate: {} as Record<string, number>
+    lastWeatherUpdate: {} as Record<string, number>,
+    hydrated: false
   }),
 
   actions: {
+    loadFromLocalStorage() {
+      if (import.meta.client && !this.hydrated) {
+        const stored = localStorage.getItem('reminders')
+        if (stored) {
+          try {
+            const data = JSON.parse(stored)
+            this.reminders = data.reminders || []
+            this.lastWeatherUpdate = data.lastWeatherUpdate || {}
+          } catch (e) {
+            console.error('Failed to parse stored reminders:', e)
+          }
+        }
+        this.hydrated = true
+      }
+    },
+
+    saveToLocalStorage() {
+      if (import.meta.client) {
+        const data = {
+          reminders: this.reminders,
+          lastWeatherUpdate: this.lastWeatherUpdate
+        }
+        localStorage.setItem('reminders', JSON.stringify(data))
+      }
+    },
+
     addReminder(reminder: Omit<Reminder, 'id'>) {
       const newReminder: Reminder = {
         ...reminder,
         id: Date.now()
       }
       this.reminders.push(newReminder)
+      this.saveToLocalStorage()
     },
 
     openModal(date: string) {
@@ -49,11 +77,13 @@ export const useRemindersStore = defineStore('reminders', {
       const index = this.reminders.findIndex(r => r.id === id)
       if (index !== -1) {
         this.reminders.splice(index, 1)
+        this.saveToLocalStorage()
       }
     },
 
     deleteAllRemindersForDate(date: string) {
       this.reminders = this.reminders.filter(r => r.date !== date)
+      this.saveToLocalStorage()
     },
 
     updateReminder(id: number, updatedData: Omit<Reminder, 'id'>) {
@@ -63,6 +93,7 @@ export const useRemindersStore = defineStore('reminders', {
           ...updatedData,
           id
         }
+        this.saveToLocalStorage()
       }
     },
 
@@ -89,6 +120,7 @@ export const useRemindersStore = defineStore('reminders', {
           ...this.reminders[index]!,
           weather
         })
+        this.saveToLocalStorage()
       }
     },
 
@@ -99,6 +131,7 @@ export const useRemindersStore = defineStore('reminders', {
       }
       // Update weather timestamp
       this.lastWeatherUpdate[date] = Date.now()
+      this.saveToLocalStorage()
     },
 
     async refreshAllWeather() {

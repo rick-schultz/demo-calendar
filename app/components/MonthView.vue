@@ -87,6 +87,7 @@ let weatherRefreshInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   // Initial fetch
+  remindersStore.loadFromLocalStorage()
   remindersStore.refreshAllWeather()
   
   // Set up 5-minute auto-refresh
