@@ -44,7 +44,34 @@
         </div>
         <div>
           <label class="block text-sm font-semibold mb-1">Time</label>
+          <div v-if="isSafari" class="flex gap-2">
+            <input
+              v-model="safariTimeInput"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]{2}:[0-9]{2}"
+              placeholder="hh:mm (e.g., 02:30)"
+              maxlength="5"
+              class="flex-1 border border-gray-300 rounded px-3 py-2"
+              @input="formatTimeInput"
+            >
+            <div class="relative w-24">
+              <select
+                v-model="safariTimePeriod"
+                class="w-full border border-gray-300 rounded px-3 py-2 bg-white appearance-none pr-8"
+                @change="convertSafariTimeTo24Hour"
+              >
+                <option value="AM">a.m</option>
+                <option value="PM">p.m</option>
+              </select>
+              <UIcon 
+                name="i-heroicons-chevron-down" 
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
+              />
+            </div>
+          </div>
           <input
+            v-else
             v-model="formTime"
             type="time"
             class="w-full border border-gray-300 rounded px-3 py-2"
@@ -148,6 +175,7 @@
                   <span>{{ reminder.city }}</span>
                   <span v-if="reminder.weather" class="inline-flex items-center gap-1">
                     • <span class="font-medium">{{ reminder.weather }}</span>
+                    <UIcon :name="getWeatherIcon(reminder.weather)" class="w-4 h-4" />
                   </span>
                 </div>
               </div>
@@ -176,11 +204,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRemindersStore } from '@/stores/reminders'
 import { formatTime } from '@/utils/dateTime'
+import { useWeatherIcon } from '@/composables/useWeatherIcon'
 
 const remindersStore = useRemindersStore()
+const { getWeatherIcon } = useWeatherIcon()
 
 const formDate = ref('')
 const formTime = ref('')
@@ -189,6 +219,53 @@ const formCity = ref('')
 const formColor = ref('#3472af')
 const showExistingOnMobile = ref(false)
 const editingId = ref<number | null>(null)
+
+const isSafari = ref(false)
+if (import.meta.client) {
+  isSafari.value = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+}
+
+const safariTimeInput = ref('')
+const safariTimePeriod = ref<'AM' | 'PM'>('AM')
+
+const convertSafariTimeTo24Hour = () => {
+  if (safariTimeInput.value) {
+    const timeMatch = safariTimeInput.value.match(/^(\d{2}):(\d{2})$/)
+    if (timeMatch && timeMatch[1] && timeMatch[2]) {
+      let hour = parseInt(timeMatch[1])
+      const minute = parseInt(timeMatch[2])
+      
+      if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return
+      
+      if (safariTimePeriod.value === 'PM' && hour !== 12) {
+        hour += 12
+      } else if (safariTimePeriod.value === 'AM' && hour === 12) {
+        hour = 0
+      }
+      
+      formTime.value = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+    }
+  }
+}
+
+const convert24HourToSafariTime = (time24: string) => {
+  if (time24 && isSafari.value) {
+    const [hourStr, minute] = time24.split(':')
+    if (hourStr && minute) {
+      let hour = parseInt(hourStr)
+      
+      if (hour >= 12) {
+        safariTimePeriod.value = 'PM'
+        if (hour > 12) hour -= 12
+      } else {
+        safariTimePeriod.value = 'AM'
+        if (hour === 0) hour = 12
+      }
+      
+      safariTimeInput.value = `${String(hour).padStart(2, '0')}:${minute}`
+    }
+  }
+}
 
 const colorOptions = [
   { name: 'Blue', value: '#3472af' },
@@ -209,6 +286,8 @@ watch(() => remindersStore.selectedDate, (newDate) => {
   if (newDate) {
     formDate.value = newDate
     formTime.value = ''
+    safariTimeInput.value = ''
+    safariTimePeriod.value = 'AM'
     formText.value = ''
     formCity.value = ''
     formColor.value = '#3472af'
@@ -220,6 +299,8 @@ watch(() => remindersStore.selectedDate, (newDate) => {
 const resetForm = () => {
   formDate.value = remindersStore.selectedDate
   formTime.value = ''
+  safariTimeInput.value = ''
+  safariTimePeriod.value = 'AM'
   formText.value = ''
   formCity.value = ''
   formColor.value = '#3472af'
@@ -240,6 +321,18 @@ const cancelEdit = () => {
   }
 }
 
+const formatTimeInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  let value = input.value.replace(/[^\d]/g, '')
+  
+  if (value.length >= 3) {
+    value = value.slice(0, 2) + ':' + value.slice(2, 4)
+  }
+  
+  safariTimeInput.value = value.slice(0, 5)
+  convertSafariTimeTo24Hour()
+}
+
 const editReminder = (reminder: { id: number; date: string; time: string; text: string; city: string; color: string }) => {
   editingId.value = reminder.id
   formDate.value = reminder.date
@@ -248,6 +341,7 @@ const editReminder = (reminder: { id: number; date: string; time: string; text: 
   formCity.value = reminder.city
   formColor.value = reminder.color
   showExistingOnMobile.value = false
+  convert24HourToSafariTime(reminder.time)
 }
 
 const deleteReminder = (id: number) => {
@@ -260,6 +354,23 @@ const deleteAllReminders = () => {
 }
 
 const saveReminder = () => {
+  if (isSafari.value && safariTimeInput.value && safariTimePeriod.value && !formTime.value) {
+    const timeMatch = safariTimeInput.value.match(/^(\d{2}):(\d{2})$/)
+    if (timeMatch && timeMatch[1] && timeMatch[2]) {
+      let hour = parseInt(timeMatch[1])
+      const minute = parseInt(timeMatch[2])
+      
+      if (hour >= 1 && hour <= 12 && minute >= 0 && minute <= 59) {
+        if (safariTimePeriod.value === 'PM' && hour !== 12) {
+          hour += 12
+        } else if (safariTimePeriod.value === 'AM' && hour === 12) {
+          hour = 0
+        }
+        formTime.value = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+      }
+    }
+  }
+  
   if (!formDate.value || !formTime.value || !formText.value || !formCity.value) {
     alert('Please fill in all fields')
     return
