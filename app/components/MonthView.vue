@@ -34,7 +34,7 @@
         <div
           v-for="(dayObj, idx) in days"
           :key="idx"
-          class="day-cell px-[0.5em] py-[0.4em] text-[0.9rem] md:text-[1.3rem] font-semibold cursor-pointer hover:bg-blue-50 flex flex-col"
+          class="day-cell px-[0.5em] py-[0.4em] text-[0.9rem] lg:text-[1.3rem] font-semibold cursor-pointer hover:bg-blue-50 flex flex-col"
           :class="{
             'today-cell': isToday(dayObj.date),
             'text-[#b0b0b0]': !dayObj.current,
