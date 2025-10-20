@@ -426,5 +426,10 @@ const saveReminder = async () => {
   }
 
   resetForm()
+  
+  // Switch to existing reminders view on mobile after adding
+  if (existingReminders.value.length > 0) {
+    showExistingOnMobile.value = true
+  }
 }
 </script>
