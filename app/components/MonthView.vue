@@ -72,7 +72,7 @@
 
 <script setup lang="ts">
 import dayjs from 'dayjs'
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRemindersStore } from '@/stores/reminders'
 import { formatDate, formatTime } from '@/utils/dateTime'
 import { useWeatherIcon } from '@/composables/useWeatherIcon'
@@ -82,10 +82,26 @@ const route = useRoute()
 const router = useRouter()
 const { getWeatherIcon } = useWeatherIcon()
 
+// Force re-render on client side
+const isClient = ref(false)
+
 // Auto-refresh every 5 minutes
 let weatherRefreshInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
+  isClient.value = true
+  
+  // Set URL params to current month/year if not present
+  if (!route.query.year || !route.query.month) {
+    const now = dayjs()
+    router.replace({
+      query: {
+        year: now.year(),
+        month: now.month()
+      }
+    })
+  }
+  
   // Initial fetch
   remindersStore.loadFromLocalStorage()
   remindersStore.refreshAllWeather()
@@ -171,6 +187,8 @@ const days = computed(() => {
 })
 
 const isToday = (date: Date) => {
+  if (!isClient.value) return false // Wait for client hydration
+  
   const today = new Date()
   return date.getDate() === today.getDate() &&
          date.getMonth() === today.getMonth() &&
