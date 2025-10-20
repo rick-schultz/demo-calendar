@@ -47,18 +47,29 @@
           <div class="flex-shrink-0">{{ dayObj.date.getDate() }}</div>
           <div v-if="getRemindersForDay(dayObj.date).length > 0" class="text-[0.5rem] md:text-xs font-normal mt-1 space-y-0.5 overflow-y-auto scrollbar-hide">
             <div
-              v-for="reminder in getRemindersForDay(dayObj.date)"
-              :key="reminder.id"
-              class="flex items-center justify-between gap-1 px-1 py-0.5 rounded"
-              :style="{ backgroundColor: reminder.color + '20', color: reminder.color }"
-              :title="reminder.weather ? `Weather: ${reminder.weather}` : ''"
+              v-for="group in groupRemindersByTime(getRemindersForDay(dayObj.date))"
+              :key="group.time"
+              class="space-y-0.5"
             >
-              <span class="truncate">{{ formatTime(reminder.time) }} {{ reminder.text }}</span>
-              <UIcon 
-                v-if="reminder.weather" 
-                :name="getWeatherIcon(reminder.weather)" 
-                class="hidden md:flex flex-shrink-0 w-4 h-4"
-              />
+              <div 
+                class="grid gap-0.5"
+                :class="group.items.length === 1 ? 'grid-cols-1' : 'grid-cols-2'"
+              >
+                <div
+                  v-for="reminder in group.items"
+                  :key="reminder.id"
+                  class="flex items-center justify-between gap-1 px-1 py-0.5 rounded"
+                  :style="{ backgroundColor: reminder.color + '20', color: reminder.color }"
+                  :title="reminder.weather ? `Weather: ${reminder.weather}` : ''"
+                >
+                  <span class="truncate">{{ formatTime(reminder.time) }} {{ reminder.text }}</span>
+                  <UIcon 
+                    v-if="reminder.weather" 
+                    :name="getWeatherIcon(reminder.weather)" 
+                    class="hidden md:flex flex-shrink-0 w-4 h-4"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -206,6 +217,17 @@ const openReminderModal = (date: Date) => {
 
 const getRemindersForDay = (date: Date) => {
   return remindersStore.getRemindersForDate(formatDate(date))
+}
+
+const groupRemindersByTime = (reminders: typeof remindersStore.reminders) => {
+  const grouped: Record<string, typeof reminders> = {}
+  reminders.forEach(reminder => {
+    if (!grouped[reminder.time]) {
+      grouped[reminder.time] = []
+    }
+    grouped[reminder.time]!.push(reminder)
+  })
+  return Object.entries(grouped).map(([time, items]) => ({ time, items }))
 }
 </script>
 

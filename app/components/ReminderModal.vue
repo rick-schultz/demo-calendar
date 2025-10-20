@@ -171,40 +171,27 @@
           </div>
           <div class="space-y-2 overflow-y-auto overflow-x-hidden pr-2 flex-1">
             <div
-              v-for="reminder in existingReminders"
-              :key="reminder.id"
-              class="flex items-center gap-3 bg-gray-50 p-3 rounded border-2"
-              :style="{ borderColor: reminder.color }"
+              v-for="group in groupedReminders"
+              :key="group.time"
+              class="space-y-2"
             >
-              <div
-                class="w-1 h-12 rounded flex-shrink-0"
-                :style="{ backgroundColor: reminder.color }"
+              <ReminderCard
+                v-if="group.items.length === 1"
+                :reminder="group.items[0]!"
+                size="large"
+                @edit="editReminder"
+                @delete="deleteReminder"
               />
-              <div class="flex-1 min-w-0">
-                <div class="font-semibold text-sm">{{ formatTime(reminder.time) }} - {{ reminder.text }}</div>
-                <div class="text-xs text-gray-600 flex items-center gap-1">
-                  <span>{{ reminder.city }}</span>
-                  <span v-if="reminder.weather" class="inline-flex items-center gap-1">
-                    • <span class="font-medium">{{ reminder.weather }}</span>
-                    <UIcon :name="getWeatherIcon(reminder.weather)" class="w-4 h-4" />
-                  </span>
-                </div>
-              </div>
-              <div class="flex gap-1 flex-shrink-0">
-                <button
-                  class="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
-                  title="Edit reminder"
-                  @click="editReminder(reminder)"
-                >
-                  <UIcon name="i-heroicons-pencil" class="w-5 h-5" />
-                </button>
-                <button
-                  class="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
-                  title="Delete reminder"
-                  @click="deleteReminder(reminder.id)"
-                >
-                  <UIcon name="i-heroicons-trash" class="w-5 h-5" />
-                </button>
+              
+              <div v-else class="grid grid-cols-2 gap-2">
+                <ReminderCard
+                  v-for="reminder in group.items"
+                  :key="reminder.id"
+                  :reminder="reminder"
+                  size="small"
+                  @edit="editReminder"
+                  @delete="deleteReminder"
+                />
               </div>
             </div>
           </div>
@@ -219,11 +206,8 @@ import { ref, computed, reactive, watch } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
 import { required } from '@vuelidate/validators'
 import { useRemindersStore } from '@/stores/reminders'
-import { formatTime } from '@/utils/dateTime'
-import { useWeatherIcon } from '@/composables/useWeatherIcon'
 
 const remindersStore = useRemindersStore()
-const { getWeatherIcon } = useWeatherIcon()
 
 const formData = reactive({
   formDate: '',
@@ -305,6 +289,18 @@ const colorOptions = [
 
 const existingReminders = computed(() => {
   return remindersStore.getRemindersForDate(remindersStore.selectedDate)
+})
+
+const groupedReminders = computed(() => {
+  const reminders = existingReminders.value
+  const grouped: Record<string, typeof reminders> = {}
+  reminders.forEach(reminder => {
+    if (!grouped[reminder.time]) {
+      grouped[reminder.time] = []
+    }
+    grouped[reminder.time]!.push(reminder)
+  })
+  return Object.entries(grouped).map(([time, items]) => ({ time, items }))
 })
 
 watch(() => remindersStore.selectedDate, (newDate) => {
