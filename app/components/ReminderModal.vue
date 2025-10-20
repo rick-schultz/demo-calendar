@@ -1,11 +1,11 @@
 <template>
   <div
     v-if="remindersStore.showModal"
-    class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+    class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 md:p-4"
     @click.self="closeModal"
   >
     <div 
-      class="bg-white rounded-lg p-6 w-full flex flex-col relative"
+      class="bg-white rounded-lg p-4 md:p-6 w-full flex flex-col relative"
       :class="existingReminders.length > 0 ? 'max-w-4xl' : 'max-w-lg'"
     >
       <!-- Close Button -->
@@ -39,7 +39,7 @@
           <input
             v-model="formData.formDate"
             type="date"
-            class="w-full border rounded px-3 py-2"
+            class="border rounded px-3 py-2 w-[calc(100vw-3rem)] sm:w-full max-w-[480px]"
             :class="v$.formDate.$error ? 'border-red-500' : 'border-gray-300'"
           >
           <span v-if="v$.formDate.$error" class="text-red-500 text-xs mt-1">Date is required</span>
