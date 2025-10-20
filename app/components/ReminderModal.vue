@@ -35,15 +35,17 @@
           <h3 class="text-md font-semibold mb-3">{{ editingId ? 'Edit Reminder' : 'Add New Reminder' }}</h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-semibold mb-1">Date</label>
+          <label class="block text-sm font-semibold mb-1">Date <span class="text-red-500">*</span></label>
           <input
-            v-model="formDate"
+            v-model="formData.formDate"
             type="date"
-            class="w-full border border-gray-300 rounded px-3 py-2"
+            class="w-full border rounded px-3 py-2"
+            :class="v$.formDate.$error ? 'border-red-500' : 'border-gray-300'"
           >
+          <span v-if="v$.formDate.$error" class="text-red-500 text-xs mt-1">Date is required</span>
         </div>
         <div>
-          <label class="block text-sm font-semibold mb-1">Time</label>
+          <label class="block text-sm font-semibold mb-1">Time <span class="text-red-500">*</span></label>
           <div v-if="isSafari" class="flex gap-2">
             <input
               v-model="safariTimeInput"
@@ -52,7 +54,8 @@
               pattern="[0-9]{2}:[0-9]{2}"
               placeholder="hh:mm (e.g., 02:30)"
               maxlength="5"
-              class="flex-1 border border-gray-300 rounded px-3 py-2"
+              class="flex-1 border rounded px-3 py-2"
+              :class="v$.formTime.$error ? 'border-red-500' : 'border-gray-300'"
               @input="formatTimeInput"
             >
             <div class="relative w-24">
@@ -72,32 +75,40 @@
           </div>
           <input
             v-else
-            v-model="formTime"
+            v-model="formData.formTime"
             type="time"
-            class="w-full border border-gray-300 rounded px-3 py-2"
+            class="w-full border rounded px-3 py-2"
+            :class="v$.formTime.$error ? 'border-red-500' : 'border-gray-300'"
           >
+          <span v-if="v$.formTime.$error" class="text-red-500 text-xs mt-1 block">Time is required</span>
         </div>
         <div>
-          <label class="block text-sm font-semibold mb-1">Reminder (max 30 chars)</label>
+          <label class="block text-sm font-semibold mb-1">Reminder (max 30 chars) <span class="text-red-500">*</span></label>
           <input
-            v-model="formText"
+            v-model="formData.formText"
             type="text"
             maxlength="30"
-            class="w-full border border-gray-300 rounded px-3 py-2"
+            class="w-full border rounded px-3 py-2"
+            :class="v$.formText.$error ? 'border-red-500' : 'border-gray-300'"
             placeholder="Enter reminder..."
           >
-          <div class="text-xs text-gray-500 mt-1">
-            {{ formText.length }}/30 characters
+          <div class="flex justify-between items-center mt-1">
+            <span v-if="v$.formText.$error" class="text-red-500 text-xs">Reminder is required</span>
+            <span class="text-xs text-gray-500" :class="v$.formText.$error ? 'ml-auto' : ''">
+              {{ formData.formText.length }}/30 characters
+            </span>
           </div>
         </div>
         <div>
-          <label class="block text-sm font-semibold mb-1">City</label>
+          <label class="block text-sm font-semibold mb-1">City <span class="text-red-500">*</span></label>
           <input
-            v-model="formCity"
+            v-model="formData.formCity"
             type="text"
-            class="w-full border border-gray-300 rounded px-3 py-2"
+            class="w-full border rounded px-3 py-2"
+            :class="v$.formCity.$error ? 'border-red-500' : 'border-gray-300'"
             placeholder="Enter city..."
           >
+          <span v-if="v$.formCity.$error" class="text-red-500 text-xs mt-1 block">City is required</span>
         </div>
         <div>
           <label class="block text-sm font-semibold mb-1">Color</label>
@@ -204,7 +215,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
+import { useVuelidate } from '@vuelidate/core'
+import { required } from '@vuelidate/validators'
 import { useRemindersStore } from '@/stores/reminders'
 import { formatTime } from '@/utils/dateTime'
 import { useWeatherIcon } from '@/composables/useWeatherIcon'
@@ -212,13 +225,25 @@ import { useWeatherIcon } from '@/composables/useWeatherIcon'
 const remindersStore = useRemindersStore()
 const { getWeatherIcon } = useWeatherIcon()
 
-const formDate = ref('')
-const formTime = ref('')
-const formText = ref('')
-const formCity = ref('')
+const formData = reactive({
+  formDate: '',
+  formTime: '',
+  formText: '',
+  formCity: ''
+})
+
 const formColor = ref('#3472af')
 const showExistingOnMobile = ref(false)
 const editingId = ref<number | null>(null)
+
+const rules = {
+  formDate: { required },
+  formTime: { required },
+  formText: { required },
+  formCity: { required }
+}
+
+const v$ = useVuelidate(rules, formData)
 
 const isSafari = ref(false)
 if (import.meta.client) {
@@ -243,7 +268,7 @@ const convertSafariTimeTo24Hour = () => {
         hour = 0
       }
       
-      formTime.value = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+      formData.formTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
     }
   }
 }
@@ -284,27 +309,29 @@ const existingReminders = computed(() => {
 
 watch(() => remindersStore.selectedDate, (newDate) => {
   if (newDate) {
-    formDate.value = newDate
-    formTime.value = ''
+    formData.formDate = newDate
+    formData.formTime = ''
     safariTimeInput.value = ''
     safariTimePeriod.value = 'AM'
-    formText.value = ''
-    formCity.value = ''
+    formData.formText = ''
+    formData.formCity = ''
     formColor.value = '#3472af'
     showExistingOnMobile.value = false
     editingId.value = null
+    v$.value.$reset()
   }
 })
 
 const resetForm = () => {
-  formDate.value = remindersStore.selectedDate
-  formTime.value = ''
+  formData.formDate = remindersStore.selectedDate
+  formData.formTime = ''
   safariTimeInput.value = ''
   safariTimePeriod.value = 'AM'
-  formText.value = ''
-  formCity.value = ''
+  formData.formText = ''
+  formData.formCity = ''
   formColor.value = '#3472af'
   editingId.value = null
+  v$.value.$reset()
 }
 
 const closeModal = () => {
@@ -335,13 +362,14 @@ const formatTimeInput = (event: Event) => {
 
 const editReminder = (reminder: { id: number; date: string; time: string; text: string; city: string; color: string }) => {
   editingId.value = reminder.id
-  formDate.value = reminder.date
-  formTime.value = reminder.time
-  formText.value = reminder.text
-  formCity.value = reminder.city
+  formData.formDate = reminder.date
+  formData.formTime = reminder.time
+  formData.formText = reminder.text
+  formData.formCity = reminder.city
   formColor.value = reminder.color
   showExistingOnMobile.value = false
   convert24HourToSafariTime(reminder.time)
+  v$.value.$reset()
 }
 
 const deleteReminder = (id: number) => {
@@ -353,8 +381,8 @@ const deleteAllReminders = () => {
   showExistingOnMobile.value = false
 }
 
-const saveReminder = () => {
-  if (isSafari.value && safariTimeInput.value && safariTimePeriod.value && !formTime.value) {
+const saveReminder = async () => {
+  if (isSafari.value && safariTimeInput.value && safariTimePeriod.value && !formData.formTime) {
     const timeMatch = safariTimeInput.value.match(/^(\d{2}):(\d{2})$/)
     if (timeMatch && timeMatch[1] && timeMatch[2]) {
       let hour = parseInt(timeMatch[1])
@@ -366,21 +394,22 @@ const saveReminder = () => {
         } else if (safariTimePeriod.value === 'AM' && hour === 12) {
           hour = 0
         }
-        formTime.value = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+        formData.formTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
       }
     }
   }
   
-  if (!formDate.value || !formTime.value || !formText.value || !formCity.value) {
-    alert('Please fill in all fields')
+  const isFormValid = await v$.value.$validate()
+  
+  if (!isFormValid) {
     return
   }
 
   const reminderData = {
-    date: formDate.value,
-    time: formTime.value,
-    text: formText.value.substring(0, 30),
-    city: formCity.value,
+    date: formData.formDate,
+    time: formData.formTime,
+    text: formData.formText.substring(0, 30),
+    city: formData.formCity,
     color: formColor.value
   }
 
